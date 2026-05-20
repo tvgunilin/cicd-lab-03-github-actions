@@ -74,7 +74,6 @@ cicd-lab-03-github-actions/
 ├── .env.example                       ← copy to .env before running
 ├── .yamllint.yml                      ← built up during Block A
 ├── .pre-commit-config.yaml            ← Block A stretch target
-├── .devcontainer/                     ← Codespaces fallback config
 ├── .github/
 │   ├── workflows/
 │   │   └── ci.yml                     ← the workflow we build in Block B
