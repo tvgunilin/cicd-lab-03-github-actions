@@ -17,7 +17,8 @@ Keep it short; the goal is to make the reviewer's job easy.
 
 ## Checklist
 
-- [ ] Tests pass locally (`pytest sample-app/tests -q`)
-- [ ] Compose stack still starts cleanly (`docker compose up -d` → `/health` returns ok)
+- [ ] Validation passes locally (`ops/validate.sh`)
+- [ ] `ign-lint` is clean (`ign-lint --config rule_config.json --files "projects/**/view.json"`) — for view changes
+- [ ] Gateway still starts cleanly (`ops/setup.sh` → gateway reaches RUNNING) — for project changes
 - [ ] No secrets committed
 - [ ] Changes are scoped to one logical thing

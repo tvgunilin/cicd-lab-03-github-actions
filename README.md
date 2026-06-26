@@ -2,14 +2,27 @@
 
 Day 2, Blocks A through D of the [CI/CD for Ignition Masterclass](https://github.com/mustry-academy/cicd-masterclass).
 
-> Build a CI safety net: run linters that catch problems before they ship, write GitHub Actions workflows from scratch, and understand when to reach for self-hosted runners.
+> Build a CI safety net around a real Ignition project: run linters that catch problems before they ship, write GitHub Actions workflows from scratch, and understand when to reach for self-hosted runners.
 
-This is the third lab in the course. Like labs 01 and 02, it deliberately stays out of Ignition territory — the sample app is the same Flask + Redis stack you finished lab-02 with. We're adding CI *around* the code, not introducing new code. Ignition-specific deployments arrive in Lab 04.
+This is the third lab in the course. The subject is the same **Ignition project** you
+worked on in [Lab 02](https://github.com/mustry-academy/cicd-lab-02-branching-and-prs) — a
+Perspective HMI screen (a refrigeration-plant overview) and a couple of Python script
+libraries, running on a local gateway you spin up yourself. Lab 02 had you edit those
+project files and open PRs **by hand**; this lab makes the checks **automatic**: the
+validation you ran manually becomes a required status check no one can merge past.
+
+You don't need deep Ignition experience. The gateway's *administrative* complexity (config,
+modules, databases, deploys) is deliberately **abstracted away** — the repo tracks only the
+**project files**, and the gateway generates its own config on boot (into a Docker volume we
+never commit). How those project files are structured, and how to deploy them properly,
+is the subject of [Lab 04](https://github.com/mustry-academy/cicd-lab-04-ignition-file-based-deploy).
 
 ## Prerequisites
 
 - Completed [Lab 02](https://github.com/mustry-academy/cicd-lab-02-branching-and-prs)
 - Pass [`cicd-preflight`](https://github.com/mustry-academy/cicd-preflight)
+- Docker (with the Compose V2 plugin) — ~1.5 GB RAM is plenty for the single gateway
+- Python 3.10+ (for the linters: `ign-lint`, `yamllint`)
 - A GitHub Personal Access Token with `repo` scope (for Block C — register a self-hosted runner). Generate ahead of class.
 
 ## Quick start
@@ -18,28 +31,33 @@ This is the third lab in the course. Like labs 01 and 02, it deliberately stays 
 gh repo clone mustry-academy/cicd-lab-03-github-actions
 cd cicd-lab-03-github-actions
 cp .env.example .env
-docker compose up -d
-curl http://localhost:5051/health          # → {"status":"ok"}
+ops/setup.sh        # boots one Ignition gateway, waits for RUNNING, prints the URL + login
+# open http://localhost:8088  → log in with the .env credentials
 ```
 
-Run the tests locally:
+Before opening any PR, run the same checks CI runs — both are gateway-free and finish in
+seconds:
 
 ```bash
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r sample-app/requirements.txt
-pytest sample-app/tests -q
+ops/validate.sh                                              # every project file: valid JSON / parseable Python
+pip install ign-lint==0.6.1
+ign-lint --config rule_config.json --files "projects/**/view.json"   # Ignition-native linting of the Perspective views
 ```
 
-Run the linters locally (Block A introduces these):
+The other linters Block A introduces (install separately — see `exercises/block-a.md`):
 
 ```bash
-pip install yamllint==1.35.1 ruff==0.6.9
+pip install yamllint==1.35.1
 yamllint -c .yamllint.yml .
-ruff check .
-# hadolint, actionlint, shellcheck install separately — see exercises/block-a.md
+# actionlint, shellcheck install separately — see exercises/block-a.md
 ```
 
-The lab also runs in [GitHub Codespaces](https://github.com/features/codespaces) — the [`.devcontainer/devcontainer.json`](./.devcontainer/devcontainer.json) preinstalls everything.
+Stop the gateway when you're done:
+
+```bash
+ops/teardown.sh             # stop (keeps the gateway's data volume)
+ops/teardown.sh --volumes   # stop and wipe gateway state for a fresh start
+```
 
 ## Lab structure
 
@@ -69,47 +87,56 @@ Block D is discussion + worksheet; no checkpoint tags.
 ```
 cicd-lab-03-github-actions/
 ├── README.md
-├── PLAN.md                            ← design doc for this lab
-├── docker-compose.yml                 ← Flask + redis dev stack (carried from lab-02)
+├── docker-compose.yml                 ← one Ignition gateway (named volume + bind-mounted projects/)
 ├── .env.example                       ← copy to .env before running
+├── .gitattributes                     ← LF normalization so Ignition's JSON resources stay clean
 ├── .yamllint.yml                      ← built up during Block A
 ├── .pre-commit-config.yaml            ← Block A stretch target
+├── rule_config.json                   ← ign-lint rule configuration
 ├── .github/
 │   ├── workflows/
 │   │   └── ci.yml                     ← the workflow we build in Block B
 │   └── pull_request_template.md
-├── exercises/
-│   ├── block-a.md                     ← Validation and linters
-│   ├── block-b.md                     ← GitHub Actions workflows
-│   ├── block-c.md                     ← Self-hosted runners
-│   └── block-d.md                     ← Deployment strategy primer
+├── ops/
+│   ├── setup.sh                       ← boot the gateway and wait for RUNNING
+│   ├── scan.sh                        ← push project-file edits to the running gateway
+│   ├── teardown.sh                    ← stop the gateway (--volumes to wipe state)
+│   └── validate.sh                    ← the PR green/red check (valid JSON + parseable Python)
+├── projects/                          ← the Ignition project (bind-mounted into the gateway)
+│   └── lab-project/
+│       ├── project.json
+│       ├── com.inductiveautomation.perspective/   ← the Perspective HMI dashboard + page config
+│       └── ignition/script-python/lab/            ← Python scripts (display + util helpers)
+├── exercises/                         ← block-a..d
 ├── docs/                              ← reference reading
-│   ├── validation-and-linters.md
-│   ├── self-hosted-runners.md
-│   └── deployment-strategies.md
 ├── instructor-notes/                  ← answer keys (read after solo work)
-│   ├── block-a-key.md
-│   ├── block-b-key.md
-│   ├── block-c-key.md
-│   └── block-d-key.md
-├── scripts/
-│   └── healthcheck.sh                 ← subject of the shellcheck demo
-├── sample-app/                        ← Flask + redis (same as lab-02)
-│   ├── README.md
-│   ├── app.py
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   └── tests/
-│       └── test_app.py
 └── worksheets/
     └── deployment-strategy-worksheet.md
 ```
 
 ## The Compose stack
 
-Identical to lab-02 — a small Flask app on `:5051` and a redis sidecar on `:6378`. Carried forward verbatim so you're not learning new code; you're adding CI around the code you already know.
+A single Ignition 8.3 gateway. Two things to understand about how it's wired:
 
-> **CI is built from scratch here.** Unlike lab-02 (which deliberately had no CI), this lab adds a `.github/workflows/ci.yml` that you write block-by-block. We do **not** call any reusable workflows — students see what's inside before they call it.
+- **The gateway's own config and runtime state live in a named volume** (`ignition-data`) that the gateway generates itself on first boot. It never lands in the repo — which is exactly why you never see or touch gateway config in this lab. (That's Lab 04's subject.)
+- **Only `./projects` is bind-mounted** from the repo into the gateway. So the project files you (and CI) validate *are* the project files the gateway runs.
+
+```yaml
+services:
+  ignition:
+    image: inductiveautomation/ignition:8.3.6
+    ports: ["8088:8088"]
+    volumes:
+      - ignition-data:/usr/local/bin/ignition/data        # gateway-owned, self-generated, not in git
+      - ./projects:/usr/local/bin/ignition/data/projects   # the one thing you edit
+
+volumes:
+  ignition-data:
+```
+
+> The gateway regenerates a `.resources/` blob store and other operational files inside `projects/` as it runs. Those are gateway-owned churn and are gitignored — if you ever see them in `git status`, your ignore rules are off.
+
+> **CI is built from scratch here.** Lab 02 deliberately shipped no CI — `ops/validate.sh` was something *you* remembered to run. This lab adds a `.github/workflows/ci.yml` that you write block-by-block, turning that validation (plus `ign-lint`) into a check every PR must pass. We do **not** call any reusable workflows — you see what's inside before you call it.
 
 ## Licence
 

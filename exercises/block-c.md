@@ -131,9 +131,9 @@ End state matches `block-c-end`.
 
 ## Stretch challenge `[OPTIONAL]`
 
-Add a second label to your runner (e.g., `local-mac` or `local-linux`) and route *only* the test job to it (keep lint on GitHub-hosted). Use the multi-label `runs-on: [self-hosted, local-mac]` syntax.
+Add a second label to your runner (e.g., `local-mac` or `local-linux`) and route *only* the `validate` job (`ops/validate.sh`) to it (keep `lint` on GitHub-hosted). Use the multi-label `runs-on: [self-hosted, local-mac]` syntax.
 
-Confirm the test job lands on your runner and the lint job lands on `ubuntu-latest`. This is the realistic pattern for the labs to come: route the *bits that need on-prem network access* to a self-hosted runner, leave everything else on GitHub-hosted.
+Confirm the `validate` job lands on your runner and the `lint` job lands on `ubuntu-latest`. This is the realistic pattern for the labs to come: route the *bits that need on-prem network access* (validating against / deploying to the gateway) to a self-hosted runner, leave everything else on GitHub-hosted.
 
 ## Debrief (15 min)
 

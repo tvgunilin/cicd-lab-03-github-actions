@@ -16,25 +16,21 @@ repos:
       - id: yamllint
         args: ["-c", ".yamllint.yml"]
 
-  - repo: https://github.com/hadolint/hadolint
-    rev: v2.13.1-beta
-    hooks:
-      - id: hadolint-docker
-        args: ["sample-app/Dockerfile"]
-
   - repo: https://github.com/shellcheck-py/shellcheck-py
     rev: v0.10.0.1
     hooks:
       - id: shellcheck
         files: \.sh$
 
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.6.9
-    hooks:
-      - id: ruff
-        args: ["--fix"]
-
   - repo: https://github.com/rhysd/actionlint
     rev: v1.7.1
     hooks:
       - id: actionlint
+
+  # Ignition-native linter for Perspective views (naming, polling, scripts...).
+  # The hook only fires on staged view.json files; --config points it at ours.
+  - repo: https://github.com/bw-design-group/ignition-lint
+    rev: v0.6.1
+    hooks:
+      - id: ign-lint
+        args: ["--config=rule_config.json"]

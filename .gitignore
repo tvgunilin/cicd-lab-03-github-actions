@@ -13,10 +13,20 @@ Thumbs.db
 # Docker
 *.log
 
-# Python
+# Python (linter venvs, caches)
 __pycache__/
 *.pyc
 *.pyo
 .venv/
 venv/
 .pytest_cache/
+
+# ign-lint scratch output
+.ignition-lint/
+
+# Ignition gateway-generated artifacts (regenerated on boot/scan — never commit).
+# The gateway writes these into the bind-mounted projects/ directory.
+**/.resources/
+**/.metadata/
+**/*.digest.json
+migration-log-*.md

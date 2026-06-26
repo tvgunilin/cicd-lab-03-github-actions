@@ -48,22 +48,20 @@ on:
 permissions:
   contents: read
 jobs:
-  test:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - run: pip install -r sample-app/requirements.txt
-      - run: pytest sample-app/tests -q
+      - run: ops/validate.sh
 ```
+
+`ops/validate.sh` is the gateway-free green/red signal: it checks that every project `*.json` is valid JSON and every `code.py` parses as Python 3 — the same check you run locally. No Ignition gateway required.
 
 Open a PR, watch it run, read the logs together. Each step is a separate collapsible block in the GitHub UI — that's intentional.
 
 ## We do (20 min)
 
-Together, add a second job that runs the linters from Block A:
+Together, add a second job that runs the linters from Block A, including `ign-lint` — the Ignition-native linter for Perspective `view.json` files:
 
 ```yaml
   lint:
@@ -73,16 +71,15 @@ Together, add a second job that runs the linters from Block A:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install yamllint==1.35.1 ruff==0.6.9
+      - run: pip install yamllint==1.35.1 ign-lint==0.6.1
       - run: yamllint -c .yamllint.yml .
-      - run: ruff check .
-      - uses: hadolint/hadolint-action@v3.1.0
-        with:
-          dockerfile: sample-app/Dockerfile
       - uses: raven-actions/actionlint@v2
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends shellcheck
-      - run: shellcheck scripts/*.sh
+      - run: shellcheck ops/*.sh
+      - run: ign-lint --config rule_config.json --files "projects/**/view.json"
 ```
+
+`ign-lint` (PyPI package `ign-lint`, from `bw-design-group/ignition-lint`) understands Perspective view structure — bindings, component trees, event scripts — in a way a generic JSON linter can't. It needs Python 3.10+, which is why we pin `setup-python` to `"3.12"`.
 
 Discuss as you go:
 
@@ -102,11 +99,12 @@ Right now, the workflow runs on every PR — even docs-only changes. Add a `path
 on:
   pull_request:
     paths:
-      - "sample-app/**"
-      - "scripts/**"
+      - "projects/**"
+      - "ops/**"
       - "docker-compose.yml"
       - ".github/workflows/**"
       - ".yamllint.yml"
+      - "rule_config.json"
 ```
 
 Open a tiny PR that touches **only** `README.md`. Confirm the workflow is **skipped**, not just passed (look for the "Skipped" label).
@@ -136,7 +134,7 @@ Push, refresh, confirm the badge renders.
 In your repo settings, configure branch protection on `main`:
 
 - Require a pull request before merging
-- Require status checks to pass before merging — select `lint` and `test`
+- Require status checks to pass before merging — select `lint` and `validate`
 
 Open a fresh PR that breaks one lint rule. Confirm GitHub blocks the merge. Then fix and re-push.
 
@@ -146,26 +144,26 @@ Commit any remaining changes. Match the reference state in [`instructor-notes/bl
 
 ## Stretch challenge `[OPTIONAL]`
 
-**Matrix the tests over multiple Python versions:**
+**Matrix `ign-lint` over individual views so each view is its own check:**
 
 ```yaml
-  test:
+  lint-views:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python: ["3.11", "3.12"]
+        view:
+          - "projects/lab-project/com.inductiveautomation.perspective/views/pages/overview/view.json"
+          # add a line per view as the project grows
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python }}
-          cache: "pip"
-          cache-dependency-path: sample-app/requirements.txt
-      - run: pip install -r sample-app/requirements.txt
-      - run: pytest sample-app/tests -q
+          python-version: "3.12"
+      - run: pip install ign-lint==0.6.1
+      - run: ign-lint --config rule_config.json --files "${{ matrix.view }}"
 ```
 
-You should now see two parallel test jobs. Note the `cache: "pip"` line — it speeds up the second run substantially.
+The lab project ships a single view today, so this is a one-entry matrix — the point is the *pattern*. As the HMI grows to dozens of views, one matrix entry per view surfaces each one as a separate pass/fail check, so you can see at a glance *which* view broke. (For now, the single globbed `ign-lint` step in the `lint` job is plenty; the matrix is about isolating failures, not speed.)
 
 **Read but don't implement:** the difference between `on: pull_request` and `on: pull_request_target`. Skim the [GitHub Security Lab post on `pull_request_target`](https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/) — short version, `pull_request_target` runs the workflow file from `main` *with secrets* against the PR's code, which is a well-known privilege-escalation footgun. Default to `pull_request` unless you have a specific reason.
 

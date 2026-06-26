@@ -76,9 +76,9 @@ This is rare for ephemeral runners but common for long-lived ones that died unex
 A participant who completed the stretch should have:
 
 - Runner registered with at least two labels (e.g., `self-hosted,local-mac`)
-- Workflow with the test job routed to `runs-on: [self-hosted, local-mac]` and the lint job staying on `ubuntu-latest`
+- Workflow with the `validate` job routed to `runs-on: [self-hosted, local-mac]` and the `lint` job staying on `ubuntu-latest`
 
-Verify by watching both jobs run: test in `docker logs`, lint in the GitHub UI's normal log view.
+Verify by watching both jobs run: `validate` in `docker logs`, `lint` in the GitHub UI's normal log view.
 
 If they put *both* jobs on self-hosted, that defeats the lesson. The whole point of labels is selective routing — only the things that need on-prem network access go to self-hosted; everything else stays on GitHub-hosted for free, reliable infrastructure.
 
