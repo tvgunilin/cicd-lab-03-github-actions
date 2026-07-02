@@ -79,7 +79,14 @@ changes the Clock binding `now(1000)` → `now(250)`. `rule_config.json` sets
 **Fix:** restore `now(1000)` (or slower). Teaching point: fast polls multiply across a
 deployed HMI and hammer the gateway.
 
-**6. `project.json` — `ops/validate.sh` (malformed JSON).** `seed.sh` leaves a **trailing
+**6. Overview `view.json` — ign-lint `NamePatternRule` (snake_case component).** `seed.sh`
+renames the **Power** KPI tile to `power_tile`. Components must be PascalCase (severity
+`error` in `rule_config.json`), so ign-lint flags it and suggests `PowerTile`.
+**Fix:** rename it back to `Power`. Teaching point: naming drift is the most common
+real-world ign-lint finding — a quick rename in the Designer that ignores the team
+convention, invisible until someone greps for the old name.
+
+**7. `project.json` — `ops/validate.sh` (malformed JSON).** `seed.sh` leaves a **trailing
 comma** after the last property in `project.json` (`"parent": ""` → `"parent": "",`) — exactly
 the slip a hand-edit of a tracked resource produces. `ops/validate.sh` runs `json.load` over
 every `*.json` under `projects/`, so it fails to parse and the script exits 1 (the red PR
@@ -97,9 +104,9 @@ readability more than it helps.
 ### Clean end state
 
 After Part 1: trailing whitespace stripped; `ops/scan.sh` variable re-quoted; `example.yml`
-fixed or deleted; the Discharge binding restored to its `runScript(...)` data source and the
-Clock restored to `now(1000)`; the trailing comma removed from `project.json`; the
-`.yamllint.yml` comment extended. Every linter silent and `ops/validate.sh` exits 0.
+fixed or deleted; the Discharge binding restored to its `runScript(...)` data source, the
+Clock restored to `now(1000)`, and the Power tile renamed back to `Power`; the trailing
+comma removed from `project.json`; the `.yamllint.yml` comment extended. Every linter silent and `ops/validate.sh` exits 0.
 
 ### Grading
 
@@ -107,9 +114,10 @@ Clock restored to `now(1000)`; the trailing comma removed from `project.json`; t
   output and `ops/validate.sh` exits 0 on the final state.
 - **Justified config changes.** If they disabled a `yamllint`/`ign-lint` rule, the commit
   message or config comment should explain why.
-- **No "fixed by deleting it" cheats.** Deleting the Clock or Discharge binding to silence
-  ign-lint is wrong — restore them to real data bindings; only the *reference* and the *poll
-  rate* were broken, not the components. Removing `example.yml` is fine (it was optional).
+- **No "fixed by deleting it" cheats.** Deleting the Clock, the Discharge binding, or the
+  Power tile to silence ign-lint is wrong — restore them; only the *reference*, the *poll
+  rate*, and the *name* were broken, not the components. Removing `example.yml` is fine
+  (it was optional).
 - **The view still loads.** Editing a binding is a `view.json` edit — confirm they didn't
   break the JSON or leave a dangling reference.
 
@@ -151,9 +159,17 @@ permissions:
 jobs:
   lint:       # yamllint + actionlint + shellcheck ops/*.sh + ign-lint + docker compose config
     runs-on: ubuntu-latest
+    timeout-minutes: 10   # installs tools — needs more headroom than validate
   validate:   # ops/validate.sh — every project *.json valid, every code.py parses
     runs-on: ubuntu-latest
+    timeout-minutes: 5
 ```
+
+Note the job ids are bare `lint` / `validate` with **no `name:` override** — branch
+protection matches required checks by the displayed name, so the ids must match what
+participants selected in You-do step 4. A participant who adds pretty `name:` labels to
+their jobs after configuring protection has orphaned their required checks (see the trap
+below).
 
 The `validate` job is the gateway-free green/red signal; `ign-lint` (PyPI `ign-lint==0.6.1`,
 from `bw-design-group/ignition-lint`) is the Ignition-native linter for Perspective
@@ -164,6 +180,8 @@ from `bw-design-group/ignition-lint`) is the Ignition-native linter for Perspect
 - **`permissions: contents: read`** at the workflow level. Missing → `issue:` comment.
 - **`paths:` filter** on `pull_request` covering `projects/**`, `ops/**`, and `rule_config.json`.
   A docs-only PR must be **skipped**. If their docs PR runs the full workflow, the filter's wrong.
+  (After step 4 that same skipped PR will hang on "Expected — waiting for status" — that's the
+  trap callout working as intended, not a bug in their workflow. The no-op-twin stretch resolves it.)
 - **`ign-lint` step** in `lint` and a **`validate` job** running `ops/validate.sh`.
 - **CI badge** in `README.md` (often missed; `nitpick:` if absent).
 - **Required check** on `main` — both `lint` and `validate`.
@@ -180,6 +198,7 @@ from `bw-design-group/ignition-lint`) is the Ignition-native linter for Perspect
 ### Acceptable variations
 
 - **Job ordering** — lint-then-validate or the reverse; the jobs are independent.
+- **Missing `timeout-minutes`** — `nitpick:`; point at the 6-hour hung-job default.
 - **Skipping a linter** — ask why. "We have no shell scripts" is acceptable; "I forgot" isn't.
   `ign-lint` and `validate` are not optional — they're the point.
 
@@ -202,10 +221,18 @@ workflow, dig in — they probably copy-pasted without understanding the privile
   `continue-on-error: true` overrides.
 - *"Required-check implications?"* — The *people* part is harder than the tech. Who maintains
   CI? Who fixes it when it's flaky?
+- *"Why pin pip by version but actions by tag?"* — A moved tag is a supply-chain vector;
+  SHA-pinning plus Dependabot is the hardened answer. Expect this to land hardest with people
+  who deploy inside customer networks — connect it forward to the Part 3 runner discussion.
 
 ### Debugging tips
 
 - **"Workflow not running on my PR."** Check the `paths:` filter and the PR source branch.
+- **"My docs-only PR is stuck on *Expected — waiting for status*."** The paths-filter ×
+  required-check interaction from the step 4 callout: a skipped required check never reports,
+  so the PR waits forever. Options: the no-op twin workflow (stretch), an admin merge, or
+  accepting it for a lab repo. This is the single most common real-world surprise with
+  required checks — lean into it.
 - **"ign-lint install/run fails."** Almost always Python version — needs 3.10+. Confirm the
   `--files` glob is quoted (`"projects/**/view.json"`) so the shell doesn't expand it first.
 - **"validate fails but the views look fine."** It also parses every `code.py` as Python 3 —
@@ -267,5 +294,6 @@ gh api -X DELETE "repos/<user>/<repo>/actions/runners/<runner-id>"
 ### Take-home cleanup checklist
 
 A participant who does the optional hands-on must: revert the workflow to `ubuntu-latest`,
-`docker stop` the runner, confirm it's gone from the Runners list, and **revoke the PAT**.
-A lingering token is a real security smell — push them to complete it.
+`docker stop` the runner, and confirm it's gone from the Runners list. The registration
+tokens from `gh api` are short-lived, but if they minted a PAT for any of this, have them
+**revoke it** — a lingering token is a real security smell; push them to complete the cleanup.

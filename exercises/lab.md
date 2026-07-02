@@ -36,9 +36,18 @@ ops/setup.sh        # boots one Ignition gateway, waits for RUNNING, prints the 
 Install the linters (macOS shown; Linux/Codespaces use `apt`/release tarballs):
 
 ```bash
-brew install yamllint shellcheck actionlint
+brew install shellcheck actionlint
+
+python3 -m venv .venv && source .venv/bin/activate
 pip install yamllint==1.35.1 ign-lint==0.6.1     # ign-lint needs Python 3.10+
 ```
+
+> **Why the venv?** A bare `pip install` on Homebrew or Ubuntu 24.04+ Python fails with
+> `error: externally-managed-environment` (PEP 668); the venv sidesteps that and keeps
+> the lab's pinned tool versions out of your system Python. `.venv/` is already
+> gitignored. Re-activate in new terminals with `source .venv/bin/activate`. On a
+> minimal Debian/Ubuntu box, install the venv module first: `sudo apt install
+> python3-venv`. (Skip `brew install yamllint` — the pinned pip version is the one CI uses.)
 
 > **About `ign-lint`:** it's the one Ignition-specific tool here — a young, pre-1.0 linter
 > (v0.6.1) from [BW Design Group](https://github.com/bw-design-group)
@@ -85,8 +94,9 @@ ops/seed.sh
 ```
 
 This plants a handful of issues into your working tree — at least one for every tool,
-including a couple of realistic Ignition findings in the Perspective view: a **brittle, broken
-binding** and a **runaway poll rate**. Hunt them down with the linters. Reset to a clean tree
+including three realistic Ignition findings in the Perspective view: a **brittle, broken
+binding**, a **runaway poll rate**, and a **mis-named component**. Hunt them down with the
+linters. Reset to a clean tree
 any time with:
 
 ```bash
@@ -177,6 +187,7 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - run: ops/validate.sh
@@ -188,6 +199,7 @@ Then add a second job that runs the Part 1 linters, including `ign-lint`:
 ```yaml
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 10   # this job installs tools; give it more headroom than validate
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -208,6 +220,12 @@ you go:
 - **`GITHUB_TOKEN`** — auto-provisioned per job, scoped to the repo, expires when the job ends.
 - **Secrets vs variables** — secrets are encrypted and masked (`***`) in logs; variables
   are plain text. Live-add an `EXAMPLE_SECRET` and confirm it's masked.
+- **Job ids are check names** — branch protection (You-do step 4) matches status checks
+  by name, and a job's name *is* its id (`lint`, `validate`) unless you override it with
+  `name:`. Rename a job later and any required check pointing at the old name waits forever.
+- **`timeout-minutes`** — a hung job otherwise runs (and bills) for up to 6 hours;
+  capping every job is free insurance. Size it per job: a required check that flakes
+  because a slow apt mirror blew a too-tight cap blocks the whole team.
 
 ### You do
 
@@ -230,7 +248,7 @@ on:
 ```
 
 Open a PR that touches **only** `README.md` and confirm the workflow is **skipped** (not
-just passed).
+just passed). Hold that thought — it collides with required checks in step 4.
 
 **2 — Compose validation.** Add a final step to the lint job:
 
@@ -244,8 +262,12 @@ typos, malformed environment maps.
 **3 — Status badge.** Add a CI badge to the top of `README.md`:
 
 ```markdown
-[![CI](https://github.com/<you>/cicd-lab-03-github-actions/actions/workflows/ci.yml/badge.svg)](https://github.com/<you>/cicd-lab-03-github-actions/actions/workflows/ci.yml)
+[![CI](https://github.com/<you>/<your-repo>/actions/workflows/ci.yml/badge.svg)](https://github.com/<you>/<your-repo>/actions/workflows/ci.yml)
 ```
+
+(`<your-repo>` is whatever you created in Setup — `cicd-lab-03-github-actions` for a
+fork, `cicd-lab-03` if you followed Option B. A wrong repo name gives a silently broken
+badge, not an error.)
 
 **4 — Required check.** In repo settings, configure branch protection on `main`: require a
 PR before merging, and require status checks — select **`lint`** and **`validate`**. Now
@@ -253,15 +275,38 @@ introduce a failure — run `ops/seed.sh` to plant the broken state (or just set
 poll to `now(250)` by hand) — commit it, and open a PR. Confirm GitHub blocks the merge.
 Fix and re-push.
 
-**5 — Sanity check.** Commit any remaining changes. Your workflow should match the shipped
-[`.github/workflows/ci.yml`](../.github/workflows/ci.yml) — see
+> **The trap you just set.** Required checks and `paths:` filters interact badly. Your
+> docs-only PR from step 1 was *skipped* — but a required check that never reports
+> doesn't pass, it stays **"Expected — waiting for status" forever**. Try it: open
+> another README-only PR now and watch it hang. With branch protection on, nobody can
+> merge a docs-only change without an admin override. GitHub's documented fix is a
+> **twin no-op workflow** with the **same job names** — the job name is what a required
+> check matches on — and an inverse `paths-ignore:` filter, so it reports an instant
+> green `lint` and `validate` on exactly the PRs the real CI skips
+> ([Handling skipped but required checks](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/defining-the-mergeability-of-pull-requests/troubleshooting-required-status-checks#handling-skipped-but-required-checks)).
+> Building it is a stretch goal below; for this lab repo it's also fine to just
+> understand *why* the PR hangs — this exact interaction bites real teams.
+
+**5 — Sanity check.** Commit any remaining changes. Your workflow should *structurally*
+match the shipped [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) — same
+triggers, jobs, and step order; step `name:` labels and comments may differ — see
 [`instructor-notes/lab-key.md`](../instructor-notes/lab-key.md) for the reference end state.
 
 ### Stretch `[OPTIONAL]`
 
+- **Fix the docs-only-PR hang** with the no-op twin from the step 4 callout: a second
+  workflow whose `paths-ignore:` mirrors the real filter list, with jobs named exactly
+  `lint` and `validate` that just `echo` and exit 0 — the *job* names are what the
+  required checks match on (the workflow's `name:` is cosmetic). Mind the caveat in
+  GitHub's docs: a PR touching both docs *and* code triggers both workflows, and two
+  check runs then report under each name.
 - **Matrix `ign-lint` over individual views** so each view surfaces as its own check — a
   one-entry matrix today, but the pattern that scales as the HMI grows. (For now the single
   globbed step is plenty; the matrix is about isolating *which* view broke, not speed.)
+- **Cancel superseded runs.** Add a workflow-level `concurrency:` group
+  (`group: ${{ github.workflow }}-${{ github.ref }}`, `cancel-in-progress: true`) so a
+  force-push doesn't leave a stale run burning minutes — the `concurrency` box from the
+  mental-model diagram, in practice.
 - **Read, don't implement:** the difference between `on: pull_request` and
   `on: pull_request_target`. The latter runs the base-branch workflow *with secrets*
   against the PR's code — a well-known privilege-escalation footgun. See the
@@ -272,6 +317,10 @@ Fix and re-push.
 - Where does the workflow actually run? (An ephemeral runner spun up per job.)
 - What happens when a step fails midway? A whole job? (`continue-on-error`, `needs:`.)
 - Required checks are a contract with the *team*, not just a setting — who decides what's blocking?
+- We pin pip packages to an exact version but actions to a mutable tag (`@v4`). What's the
+  difference in risk? (A tag can be moved by the action's owner; supply-chain-sensitive repos
+  pin actions to a full commit SHA and let Dependabot bump them. This matters more once a
+  self-hosted runner sits inside a plant network — Part 3.)
 
 ---
 

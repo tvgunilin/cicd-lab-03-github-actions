@@ -1,5 +1,5 @@
 # pre-commit configuration for the lab.
-# Block A stretch target — wires Block A's linters into a pre-commit hook
+# Part 1 stretch target — wires Part 1's linters into a pre-commit hook
 # so bad commits are blocked locally before they ever reach CI.
 #
 # Setup:

@@ -1,8 +1,13 @@
 # yamllint configuration for the lab.
-# Built up during Block A — we disable line-length because Compose files
+# Built up during Part 1 — we disable line-length because Compose files
 # often have legitimately long environment lines that don't benefit from wrapping.
 
 extends: default
+
+# The lab's tool venv (see Setup) lives in the repo root and contains
+# third-party YAML we don't own — keep the linter out of it.
+ignore: |
+  .venv/
 
 rules:
   line-length: disable

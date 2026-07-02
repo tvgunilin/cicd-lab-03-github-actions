@@ -37,7 +37,8 @@ s = s.replace('"$URL/data/api/v1/scan/projects"',
               '$URL/data/api/v1/scan/projects', 1)
 p.write_text(s)
 
-# 4 + 5. ign-lint — a brittle/dangling component reference and a runaway poll, both in the view
+# 4 + 5 + 6. ign-lint — a brittle/dangling component reference, a runaway poll,
+# and a mis-named component, all in the view
 view = pathlib.Path(
     "projects/lab-project/com.inductiveautomation.perspective/views/pages/overview/view.json")
 s = view.read_text()
@@ -50,16 +51,20 @@ s = s.replace("runScript('lab.display.format_reading', 0, -6.5, '°C')",
               "{../../SuctionPressure.Value.props.text}", 1)
 # The Clock polls four times a second instead of once — PollingIntervalRule.
 s = s.replace("now(1000)", "now(250)", 1)
+# The Power KPI tile gets a snake_case rename — the classic "quick rename in the
+# Designer that ignores the naming standard". NamePatternRule wants PascalCase
+# components (severity: error in rule_config.json).
+s = s.replace('"name": "Power"', '"name": "power_tile"', 1)
 view.write_text(s)
 
-# 6. ops/validate.sh — malformed JSON: a trailing comma left in project.json by a hand-edit
+# 7. ops/validate.sh — malformed JSON: a trailing comma left in project.json by a hand-edit
 p = pathlib.Path("projects/lab-project/project.json")
 s = p.read_text()
 s = s.replace('"parent": ""', '"parent": "",', 1)   # trailing comma → invalid JSON
 p.write_text(s)
 PY
 
-# 3. actionlint — a workflow using a deprecated action + an undefined env var
+# 3. actionlint — a throwaway workflow pinned to a deprecated action
 mkdir -p .github/workflows
 cat > .github/workflows/example.yml <<'YML'
 name: Example workflow
@@ -79,7 +84,8 @@ Seeded issues into the working tree:
   3. .github/workflows/example.yml   — actionlint  (deprecated actions/checkout@v2)
   4. overview/view.json (Discharge)  — ign-lint    (brittle + dangling component reference)
   5. overview/view.json (Clock)      — ign-lint    (poll faster than the 1000ms floor)
-  6. project.json                    — validate.sh (malformed JSON: trailing comma)
+  6. overview/view.json (Power tile) — ign-lint    (snake_case component name)
+  7. project.json                    — validate.sh (malformed JSON: trailing comma)
 
 Find them with the linters. When you're done, reset to a clean tree with:
   git restore . && rm -f .github/workflows/example.yml

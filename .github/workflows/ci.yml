@@ -19,9 +19,15 @@ permissions:
   contents: read
 
 jobs:
+  # Job ids double as the status-check names branch protection matches on.
+  # Keep them stable — renaming `lint`/`validate` (or overriding them with a
+  # `name:`) silently orphans the required checks configured on main.
   lint:
-    name: Lint (yaml, shell, actions, ignition)
     runs-on: ubuntu-latest
+    # A hung job otherwise runs (and bills) for up to 6 hours. This job installs
+    # tools (apt + pip + a Docker-based action), so give it more headroom than
+    # validate — a required check that flakes on a slow mirror blocks everyone.
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
@@ -52,8 +58,8 @@ jobs:
         run: docker compose config -q
 
   validate:
-    name: Validate (project files)
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
 

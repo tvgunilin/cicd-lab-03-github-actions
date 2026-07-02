@@ -23,7 +23,8 @@ is the subject of [Lab 04](https://github.com/mustry-academy/cicd-lab-04-ignitio
 - Pass [`cicd-preflight`](https://github.com/mustry-academy/cicd-preflight)
 - Docker (with the Compose V2 plugin) — ~1.5 GB RAM is plenty for the single gateway
 - Python 3.10+ (for the linters: `ign-lint`, `yamllint`)
-- A GitHub Personal Access Token with `repo` scope (for the self-hosted-runner demo). Generate ahead of class.
+- The [GitHub CLI](https://cli.github.com/) (`gh`), authenticated (`gh auth status`) — Part 3's
+  runner demo mints its short-lived registration token through it; no personal access token needed.
 
 ## Quick start
 
@@ -40,6 +41,7 @@ seconds:
 
 ```bash
 ops/validate.sh                                              # every project file: valid JSON / parseable Python
+python3 -m venv .venv && source .venv/bin/activate           # bare pip fails on Homebrew/Ubuntu-24.04 Python (PEP 668)
 pip install ign-lint==0.6.1
 ign-lint --config rule_config.json --files "projects/**/view.json"   # Ignition-native linting of the Perspective views
 ```
@@ -47,6 +49,7 @@ ign-lint --config rule_config.json --files "projects/**/view.json"   # Ignition-
 The other linters Part 1 introduces (install separately — see [`exercises/lab.md`](./exercises/lab.md)):
 
 ```bash
+source .venv/bin/activate           # the venv from the block above (no-op if still active)
 pip install yamllint==1.35.1
 yamllint -c .yamllint.yml .
 # actionlint, shellcheck install separately — see exercises/lab.md
