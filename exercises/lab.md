@@ -36,9 +36,18 @@ ops/setup.sh        # boots one Ignition gateway, waits for RUNNING, prints the 
 Install the linters (macOS shown; Linux/Codespaces use `apt`/release tarballs):
 
 ```bash
-brew install yamllint shellcheck actionlint
+brew install shellcheck actionlint
+
+python3 -m venv .venv && source .venv/bin/activate
 pip install yamllint==1.35.1 ign-lint==0.6.1     # ign-lint needs Python 3.10+
 ```
+
+> **Why the venv?** A bare `pip install` on Homebrew or Ubuntu 24.04+ Python fails with
+> `error: externally-managed-environment` (PEP 668); the venv sidesteps that everywhere
+> and keeps the lab's pinned tool versions out of your system Python. `.venv/` is already
+> gitignored. Re-activate in new terminals with `source .venv/bin/activate`. (Don't
+> `brew install yamllint` alongside it — you'd end up with two versions and PATH decides
+> which one runs; the pinned pip install is the one CI uses.)
 
 > **About `ign-lint`:** it's the one Ignition-specific tool here — a young, pre-1.0 linter
 > (v0.6.1) from [BW Design Group](https://github.com/bw-design-group)
@@ -251,8 +260,12 @@ typos, malformed environment maps.
 **3 — Status badge.** Add a CI badge to the top of `README.md`:
 
 ```markdown
-[![CI](https://github.com/<you>/cicd-lab-03-github-actions/actions/workflows/ci.yml/badge.svg)](https://github.com/<you>/cicd-lab-03-github-actions/actions/workflows/ci.yml)
+[![CI](https://github.com/<you>/<your-repo>/actions/workflows/ci.yml/badge.svg)](https://github.com/<you>/<your-repo>/actions/workflows/ci.yml)
 ```
+
+(`<your-repo>` is whatever you created in Setup — `cicd-lab-03-github-actions` for a
+fork, `cicd-lab-03` if you followed Option B. A wrong repo name gives a silently broken
+badge, not an error.)
 
 **4 — Required check.** In repo settings, configure branch protection on `main`: require a
 PR before merging, and require status checks — select **`lint`** and **`validate`**. Now

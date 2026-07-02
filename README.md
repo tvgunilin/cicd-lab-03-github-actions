@@ -40,6 +40,7 @@ seconds:
 
 ```bash
 ops/validate.sh                                              # every project file: valid JSON / parseable Python
+python3 -m venv .venv && source .venv/bin/activate           # bare pip fails on Homebrew/Ubuntu-24.04 Python (PEP 668)
 pip install ign-lint==0.6.1
 ign-lint --config rule_config.json --files "projects/**/view.json"   # Ignition-native linting of the Perspective views
 ```
@@ -47,7 +48,7 @@ ign-lint --config rule_config.json --files "projects/**/view.json"   # Ignition-
 The other linters Part 1 introduces (install separately — see [`exercises/lab.md`](./exercises/lab.md)):
 
 ```bash
-pip install yamllint==1.35.1
+pip install yamllint==1.35.1        # same venv as above
 yamllint -c .yamllint.yml .
 # actionlint, shellcheck install separately — see exercises/lab.md
 ```
