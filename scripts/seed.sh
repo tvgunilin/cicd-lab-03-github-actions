@@ -33,8 +33,8 @@ p.write_text(s)
 # 2. shellcheck SC2086 — unquoted variable in scripts/scan.sh
 p = pathlib.Path("scripts/scan.sh")
 s = p.read_text()
-s = s.replace('"$URL/data/api/v1/scan/projects"',
-              '$URL/data/api/v1/scan/projects', 1)
+s = s.replace('"$URL/data/api/v1/scan/$1"',
+              '$URL/data/api/v1/scan/$1', 1)
 p.write_text(s)
 
 # 4 + 5 + 6. ign-lint — a brittle/dangling component reference, a runaway poll,
