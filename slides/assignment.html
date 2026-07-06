@@ -249,22 +249,32 @@ body{
     <div class="cols2">
       <div class="steps">
         <div class="step"><div class="ix t">1</div><div class="tx"><b>Boot the gateway.</b> Run <span class="inlinecode">cp .env.example .env</span> then <span class="inlinecode">scripts/setup.sh</span>. Wait for RUNNING; open <span class="inlinecode">http://localhost:8088</span>. This is the lab's deployment environment: only <span class="inlinecode">./projects</span> is bind-mounted into it, so the files the linters check <b>are</b> the files the gateway runs. (<span class="inlinecode">scripts/teardown.sh</span> stops it.)</div></div>
-        <div class="step"><div class="ix t">2</div><div class="tx"><b>Install the linters</b> (see command block; <span class="inlinecode">ign-lint</span> needs Python 3.10+).</div></div>
-        <div class="step"><div class="ix t">3</div><div class="tx"><b>Get your own repo</b>, needed for Part 2's branch protection. Fork, or create a fresh repo from your clone.</div></div>
+        <div class="step"><div class="ix t">2</div><div class="tx"><b>Install the linters</b> (see block). The venv sidesteps pip's <span class="inlinecode">externally-managed-environment</span> error; <span class="inlinecode">ign-lint</span> needs Python 3.10+. Skip brew's yamllint — the pinned pip version is the one CI uses.</div></div>
+        <div class="step"><div class="ix t">3</div><div class="tx"><b>Get your own repo</b>, needed for Part 2's branch protection: fork the lab, then <b>enable Actions</b> on the fork (its Actions tab — forks start with workflows dormant).</div></div>
         <div class="step"><div class="ix t">4</div><div class="tx"><b>Reference reading</b> lives in <span class="inlinecode">docs/validation-and-linters.md</span> and <span class="inlinecode">docs/self-hosted-runners.md</span>: cheat sheets, not homework.</div></div>
       </div>
       <div>
-        <div class="code"><pre><span class="cm"># 2: linters (macOS shown; Linux uses apt / tarballs)</span>
-brew install yamllint shellcheck actionlint
+        <div class="code"><pre><span class="cm"># 2: linters — macOS</span>
+brew install shellcheck actionlint
+<span class="cm"># 2: linters — Debian/Ubuntu/WSL (no brew there)</span>
+sudo apt install shellcheck python3-venv
+<span class="cm">#    actionlint has no apt package: release binary →</span>
+<span class="cm">#    /usr/local/bin · one-liner in lab.md § Setup</span>
+<span class="cm"># 2: both platforms — venv, then the pinned tools</span>
+python3 -m venv .venv &amp;&amp; source .venv/bin/activate
 pip install yamllint==1.35.1 ign-lint==0.6.1
 
-<span class="cm"># 3: option A: fork</span>
-gh repo fork Mustry-Academy/cicd-lab-03-github-actions --clone
-<span class="cm"># 3: option B: your own repo from this clone</span>
-gh repo create &lt;you&gt;/cicd-lab-03 --private --source=. --push</pre></div>
+<span class="cm"># 3: fork, from inside your clone (origin → your fork)</span>
+gh repo fork --remote
+gh repo set-default &lt;you&gt;/cicd-lab-03-github-actions
+<span class="cm"># then: fork's Actions tab → enable workflows</span></pre></div>
         <div class="goal" style="margin-top:18px">
           <span class="badge">Why your own</span>
           <p>Part 2 configures <b>branch protection</b> and merges PRs, so you need <b>admin rights</b>. Inside your own copy, you can do both freely.</p>
+        </div>
+        <div class="goal warn-g" style="margin-top:14px">
+          <span class="badge">Port 8088 busy?</span>
+          <p>That's your <b>Lab 02 gateway</b>, still running from yesterday — <span class="inlinecode">restart: unless-stopped</span> keeps it alive, reboots included. Deliberate lesson: a port is a machine-wide resource, and two gateways can't share one. Tear it down first (its state survives in its volume): <span class="inlinecode">cd ../cicd-lab-02-* &amp;&amp; scripts/teardown.sh</span>, then re-run <span class="inlinecode">scripts/setup.sh</span> here.</p>
         </div>
       </div>
     </div>

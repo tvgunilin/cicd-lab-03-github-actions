@@ -33,11 +33,26 @@ scripts/setup.sh        # boots one Ignition gateway, waits for RUNNING, prints 
 # open http://localhost:8088  → log in with the .env credentials
 ```
 
-Install the linters (macOS shown; Linux/Codespaces use `apt`/release tarballs):
+> **"Port is already allocated"?** That's your **Lab 02 gateway**, still running from
+> yesterday — its `restart: unless-stopped` policy keeps it alive, reboots included. This
+> collision is left in deliberately: a port is a machine-wide resource, and two gateways
+> can't share one. Tear Lab 02 down first (its state survives in its Docker volume):
+> `cd ../cicd-lab-02-branching-and-prs && scripts/teardown.sh`, then re-run
+> `scripts/setup.sh` here.
+
+Install the linters:
 
 ```bash
+# macOS
 brew install shellcheck actionlint
 
+# Debian/Ubuntu/WSL — shellcheck via apt; actionlint has NO apt package,
+# so grab the release binary and put it on your PATH:
+sudo apt install shellcheck python3-venv
+bash <(curl -sSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+sudo mv actionlint /usr/local/bin/
+
+# both platforms — the venv keeps the pinned tools out of your system Python:
 python3 -m venv .venv && source .venv/bin/activate
 pip install yamllint==1.35.1 ign-lint==0.6.1     # ign-lint needs Python 3.10+
 ```
