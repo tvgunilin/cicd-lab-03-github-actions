@@ -77,17 +77,17 @@ pip install yamllint==1.35.1 ign-lint==0.6.1     # ign-lint needs Python 3.10+
 ### Your own repo (needed for Part 2)
 
 Part 2 has you open pull requests and set a *required status check* on `main` — both need
-a repo **you** control (you need admin rights to configure branch protection). Fork the lab
-to your own account, from inside the clone you already have:
+a repo **you** control (you need admin rights to configure branch protection). You already
+forked the lab and cloned your fork, so `origin` is your own repo — nothing more to set up.
+Just point `gh` at your fork so PRs land there and not on the source repo:
 
 ```bash
-# forks on GitHub and rewires this clone's remotes:
-#   origin → your fork · upstream → Mustry-Academy
-gh repo fork --remote
-
 # make gh target YOUR fork for PRs, not the source repo:
 gh repo set-default <you>/cicd-lab-03-github-actions
 ```
+
+Confirm `origin` is your fork with `git remote -v`. (No `upstream` remote is needed — the
+lab never pulls from the source repo.)
 
 Two fork gotchas, both one-time:
 

@@ -190,7 +190,7 @@ body{
     <ul class="checks" style="max-width:940px">
       <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span><span><b>Share your screen</b> in your breakout room. This is a "look over your shoulder" class, so we'll drop in where it's useful.</span></li>
       <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span><span><b>The full script is <span class="inlinecode">exercises/lab.md</span>.</b> These slides are the map, that file is the territory. Keep it open next to your terminal.</span></li>
-      <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span><span><b>Part 2 needs a repo you own</b> (admin rights for branch protection). Fork the lab and <b>enable Actions on the fork</b> before starting Part 2. Commands on the setup slide.</span></li>
+      <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span><span><b>Part 2 needs a repo you own</b> (admin rights for branch protection). You already forked it — just <b>enable Actions on the fork</b> before starting Part 2. Commands on the setup slide.</span></li>
       <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span><span><b>Don't peek at <span class="inlinecode">instructor-notes/lab-key.md</span></b> until you've genuinely tried. The diagnostic skill (run tool, read output, decide) is most of the lesson.</span></li>
       <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span><span><b>Try it without AI.</b> The goal is the toolbelt in your fingers, and you'll steer AI far better afterwards.</span></li>
     </ul>
@@ -250,7 +250,7 @@ body{
       <div class="steps">
         <div class="step"><div class="ix t">1</div><div class="tx"><b>Boot the gateway.</b> Run <span class="inlinecode">cp .env.example .env</span> then <span class="inlinecode">scripts/setup.sh</span>. Wait for RUNNING; open <span class="inlinecode">http://localhost:8088</span>. This is the lab's deployment environment: only <span class="inlinecode">./projects</span> is bind-mounted into it, so the files the linters check <b>are</b> the files the gateway runs. (<span class="inlinecode">scripts/teardown.sh</span> stops it.)</div></div>
         <div class="step"><div class="ix t">2</div><div class="tx"><b>Install the linters</b> (see block). The venv sidesteps pip's <span class="inlinecode">externally-managed-environment</span> error; <span class="inlinecode">ign-lint</span> needs Python 3.10+. Skip brew's yamllint — the pinned pip version is the one CI uses.</div></div>
-        <div class="step"><div class="ix t">3</div><div class="tx"><b>Get your own repo</b>, needed for Part 2's branch protection: fork the lab, then <b>enable Actions</b> on the fork (its Actions tab — forks start with workflows dormant).</div></div>
+        <div class="step"><div class="ix t">3</div><div class="tx"><b>Point at your own repo</b>, needed for Part 2's branch protection: you already forked and cloned it, so just <span class="inlinecode">set-default</span> to it, then <b>enable Actions</b> on the fork (its Actions tab — forks start with workflows dormant).</div></div>
         <div class="step"><div class="ix t">4</div><div class="tx"><b>Reference reading</b> lives in <span class="inlinecode">docs/validation-and-linters.md</span> and <span class="inlinecode">docs/self-hosted-runners.md</span>: cheat sheets, not homework.</div></div>
       </div>
       <div>
@@ -271,12 +271,7 @@ python3 --version
 python3 -m venv .venv &amp;&amp; source .venv/bin/activate
 python --version        <span class="cm"># verify it's 3.10-3.13 inside the venv</span>
 pip install --upgrade pip
-pip install yamllint==1.35.1 ign-lint==0.6.1
-
-<span class="cm"># 3: fork, from inside your clone (origin → your fork)</span>
-gh repo fork --remote
-gh repo set-default &lt;you&gt;/cicd-lab-03-github-actions
-<span class="cm"># then: fork's Actions tab → enable workflows</span></pre></div>
+pip install yamllint==1.35.1 ign-lint==0.6.1</pre></div>
         <div class="goal" style="margin-top:18px">
           <span class="badge">Why your own</span>
           <p>Part 2 configures <b>branch protection</b> and merges PRs, so you need <b>admin rights</b>. Inside your own copy, you can do both freely.</p>
