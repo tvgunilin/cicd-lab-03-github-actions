@@ -485,6 +485,50 @@ gh pr create --fill</pre></div>
   <div class="foot"><span>Mustry Academy · CI/CD for Ignition</span><span>Part 3 · demo + discussion → stretch or wrap-up</span></div>
 </section>
 
+<!-- 10b · STRETCH 0 · RUN A SELF-HOSTED RUNNER -->
+<section class="slide">
+  <div class="topbar">
+    <div class="brandrow"><img class="logo-img" src="logos/OriginalDark.png" alt="Mustry Solutions"></div>
+    <div class="stage">Optional stretch · try it yourself</div>
+  </div>
+  <div class="body">
+    <div class="sechead"><span class="num warm">OPTIONAL · 0</span><div><div class="title">Stretch 0: register a runner, run a job on your own machine</div><div class="lead">You watched the demo. Now do it in your fork: an <b>ephemeral Docker runner</b> claims one job and terminates. Full how-to in <span class="inlinecode">docs/self-hosted-runners.md</span>.</div></div></div>
+    <div class="cols2">
+      <div class="steps">
+        <div class="step"><div class="ix t">1</div><div class="tx"><b>Mint a short-lived token</b> and <b>start the runner</b> (see block). It registers against <i>your</i> fork, prints "Listening for Jobs", and appears in <i>Settings → Actions → Runners</i>. Needs Docker running.</div></div>
+        <div class="step"><div class="ix t">2</div><div class="tx"><b>Dispatch the job.</b> The repo ships <span class="inlinecode">.github/workflows/self-hosted-demo.yml</span> (manual-only, <span class="inlinecode">runs-on: [self-hosted, local-lab03]</span>). Fire it with <span class="inlinecode">gh workflow run</span> and watch it execute in <span class="inlinecode">docker logs</span>, not on GitHub's infra.</div></div>
+        <div class="step"><div class="ix t">3</div><div class="tx"><b>Meet the gotcha.</b> The last step probes for <span class="inlinecode">shellcheck</span>. Your bare runner doesn't have it: "works on ubuntu-latest" was an assumption. The runner has only what you put on it.</div></div>
+        <div class="step"><div class="ix t">4</div><div class="tx"><b>Clean up</b> (part of the exercise). Ephemeral + <span class="inlinecode">--rm</span> means it self-removes after one job; confirm it's gone from the Runners list. Any PAT you minted: <b>revoke it</b>.</div></div>
+      </div>
+      <div>
+        <div class="code"><pre><span class="cm"># 1: short-lived registration token (your fork)</span>
+export RUNNER_TOKEN=<span class="cmd2">"$(gh api -X POST \
+  repos/&lt;you&gt;/cicd-lab-03-github-actions/actions/runners/registration-token \
+  --jq .token)"</span>
+
+docker run -d --rm --name lab03-runner \
+  -e REPO_URL=<span class="cmd2">"https://github.com/&lt;you&gt;/cicd-lab-03-github-actions"</span> \
+  -e RUNNER_TOKEN=<span class="cmd2">"$RUNNER_TOKEN"</span> \
+  -e LABELS=<span class="cmd2">"self-hosted,local-lab03"</span> \
+  -e EPHEMERAL=true \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  myoung34/github-runner:latest
+
+docker logs -f lab03-runner   <span class="cm"># wait for "Listening for Jobs"</span>
+
+<span class="cm"># 2: dispatch the job at your local runner</span>
+gh workflow run self-hosted-demo.yml
+<span class="cm"># → the job runs in docker logs, then the runner exits</span></pre></div>
+        <div class="goal warn-g" style="margin-top:16px">
+          <span class="badge">The one rule</span>
+          <p>A self-hosted runner runs <b>arbitrary workflow code</b> on a machine inside your network. <b>Never</b> attach one to a <b>public</b> repo that takes <b>fork PRs</b>: a malicious PR runs on your box. Ephemeral runners, trusted repos.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>Mustry Academy · CI/CD for Ignition</span><span>Stretch 0 · self-hosted runner · optional</span></div>
+</section>
+
 <!-- 11 · STRETCH 1 · PRE-COMMIT -->
 <section class="slide">
   <div class="topbar">
@@ -526,12 +570,13 @@ git commit -am <span class="cmd2">"test: should be blocked"</span>
     <div class="stage">Optional stretch</div>
   </div>
   <div class="body">
-    <div class="sechead"><span class="num phase2">OPTIONAL · 2</span><div><div class="title">Stretch 2: a matrix, and a footgun to read about</div><div class="lead">Two independent extras from <span class="inlinecode">exercises/lab.md</span>: do either, both, or neither.</div></div></div>
+    <div class="sechead"><span class="num phase2">OPTIONAL · 2</span><div><div class="title">Stretch 2: three small workflow extras</div><div class="lead">Independent extras from <span class="inlinecode">exercises/lab.md</span>: do any, all, or none.</div></div></div>
     <div class="cols2">
       <div>
         <div class="steps">
           <div class="step"><div class="ix p">A</div><div class="tx"><b>Matrix ign-lint over individual views</b> so each view surfaces as its own check. One entry today, but it's the pattern that scales as the HMI grows: it isolates <i>which</i> view broke, not speed.</div></div>
-          <div class="step"><div class="ix p">B</div><div class="tx"><b>Read, don't implement:</b> <span class="inlinecode">on: pull_request</span> vs <span class="inlinecode">on: pull_request_target</span>. The latter runs the base branch's workflow <b>with secrets</b> against the PR's code: a well-known privilege-escalation footgun. Search: <i>GitHub Security Lab, "preventing pwn requests"</i>.</div></div>
+          <div class="step"><div class="ix p">B</div><div class="tx"><b>Cancel superseded runs.</b> Add a workflow-level <span class="inlinecode">concurrency</span> group keyed on the ref so a fresh push <b>cancels the in-flight run</b> on the same branch, instead of both burning minutes to the end.</div></div>
+          <div class="step"><div class="ix p">C</div><div class="tx"><b>Pin actions by SHA.</b> Swap one <span class="inlinecode">@v4</span> tag for its full commit SHA. A tag can be silently re-pointed by its owner: a supply-chain risk that bites harder once a runner sits inside a plant network. Let Dependabot bump it.</div></div>
         </div>
       </div>
       <div>
@@ -547,15 +592,23 @@ git commit -am <span class="cmd2">"test: should be blocked"</span>
       - uses: actions/setup-python@v5
         with: {python-version: <span class="cmd2">"3.12"</span>}
       - run: pip install ign-lint==0.6.1
-      - run: ign-lint --config rule_config.json --files <span class="cmd2">"${{ matrix.view }}"</span></pre></div>
-        <div class="goal warn-g" style="margin-top:16px">
-          <span class="badge">Red flag</span>
-          <p>If <span class="inlinecode">pull_request_target</span> ever appears in your own workflows, you should be able to explain <b>exactly</b> why, and what you did to keep it safe.</p>
+      - run: ign-lint --config rule_config.json --files <span class="cmd2">"${{ matrix.view }}"</span>
+
+<span class="cm"># B: cancel superseded runs (workflow-level)</span>
+concurrency:
+  group: <span class="cmd2">"${{ github.workflow }}-${{ github.ref }}"</span>
+  cancel-in-progress: true
+
+<span class="cm"># C: pin an action by SHA, not a movable tag</span>
+      - uses: actions/checkout@<span class="cmd2">08c6903</span>  <span class="cm"># v4.x</span></pre></div>
+        <div class="goal" style="margin-top:16px">
+          <span class="badge">Why they help</span>
+          <p>Each is a real hardening habit in miniature: <b>named checks</b> that point at the broken view, <b>no wasted minutes</b> on stale runs, and a <b>tag that can't be re-pointed</b> under you.</p>
         </div>
       </div>
     </div>
   </div>
-  <div class="foot"><span>Mustry Academy · CI/CD for Ignition</span><span>Stretch 2 of 2 · optional</span></div>
+  <div class="foot"><span>Mustry Academy · CI/CD for Ignition</span><span>Stretch 2 of 2 · optional · pick any</span></div>
 </section>
 
 <!-- 13 · DONE -->
