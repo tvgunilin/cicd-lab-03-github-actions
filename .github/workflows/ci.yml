@@ -63,4 +63,3 @@ jobs:
         # Gateway-free green/red signal: every project *.json is valid JSON and
         # every code.py parses as Python 3. The same check you run locally.
         run: scripts/validate.sh
-        
