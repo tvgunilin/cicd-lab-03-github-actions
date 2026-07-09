@@ -34,8 +34,11 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
 
-      - name: Set up npm
+      - name: Setup Node.js
         uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: 'npm'
 
 
       - name: Install Python tools
