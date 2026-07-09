@@ -23,7 +23,7 @@ jobs:
   # Keep them stable — renaming `lint`/`validate` (or overriding them with a
   # `name:`) silently orphans the required checks configured on main.
   lint:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, local-lab03]
     # A hung job otherwise runs (and bills) for up to 6 hours. This job installs
     # tools (apt + pip + a Docker-based action), so give it more headroom than
     # validate — a required check that flakes on a slow mirror blocks everyone.
